@@ -231,6 +231,27 @@ jobs:
         run: |
           cd ${{ github.workspace }}
           git clone --quiet --depth=1 --recurse-submodules https://github.com/therealFoxster/DontEatMyContent.git
+          
+  - name: Ensure Foundation imports in preprocessed Tweak (CI patch)
+  if: ${{ inputs.enable_ytuhd }}
+  run: |
+    echo "Searching for preprocessed Tweak files to patch..."
+    # prefer the theos preprocessed object path, fallback to any Tweak.xm source
+    FILE="$(find $GITHUB_WORKSPACE -path '*/YTUHD/.theos/obj/*/Tweak.xm*' -type f 2>/dev/null | head -n1)"
+    if [ -n "$FILE" ]; then
+      echo "Found preprocessed file: $FILE"
+      sed -i.bak '1i#import <Foundation/Foundation.h>\n#import <UIKit/UIKit.h>\n#include <string.h>' "$FILE" || true
+      echo "Patched $FILE"
+    else
+      SRC="$(find $GITHUB_WORKSPACE -type f -name 'Tweak.xm' -path '*/YTUHD/*' 2>/dev/null | head -n1)"
+      if [ -n "$SRC" ]; then
+        echo "Patching source Tweak.xm: $SRC"
+        sed -i.bak '1i#import <Foundation/Foundation.h>\n#import <UIKit/UIKit.h>\n#include <string.h>' "$SRC" || true
+        echo "Patched $SRC"
+      else
+        echo "No YTUHD Tweak found; nothing to patch"
+      fi
+    fi
 
       - name: Build YouPiP
         if: ${{ inputs.enable_youpip }}
